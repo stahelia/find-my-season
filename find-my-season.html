@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find my Season: Photo analysis (v2)</title>
+<style>
+  :root { --bg:#fbf6ef; --ink:#2b2622; --soft:#6b6058; --line:#e6d9c6; --card:#fff; --warn-bg:#fff4db; --warn-ink:#7a4b0c; --warn-line:#e8b95a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 56px; }
+  h1 { font-family: Georgia, "Palatino Linotype", serif; font-weight: 400; font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 20px 0 8px; }
+  h2 { font-family: Georgia, "Palatino Linotype", serif; font-weight: 400; font-size: 1.5rem; margin: 0 0 10px; }
+  .banner { background: var(--ink); color:#fff; text-align:center; padding:8px 12px; font-size:.95rem; margin-top:48px; }
+  .topnav { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 0 4px; }
+  .topnav .logo { white-space:nowrap; font-family: Georgia, "Palatino Linotype", serif; font-size:1.4rem; text-decoration:none; color:var(--ink); }
+  .topnav .logo span { color:#a85b58; }
+  .topnav nav { display:flex; align-items:center; gap:18px; }
+  .topnav nav a { text-decoration:none; font-size:.95rem; color:var(--soft); }
+  .topnav nav a:hover { color:var(--ink); }
+  .topnav nav a.navbtn { white-space:nowrap; display:inline-block; font:600 .9rem system-ui,sans-serif; padding:9px 18px; border-radius:999px; border:2px solid var(--ink); background:var(--ink); color:#fff; }
+  .tips { color:var(--soft); font-size:.95rem; margin:0 0 6px; }
+  .slots { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0; }
+  .slot { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .slot h3 { margin:0 0 8px; font-size:1.05rem; }
+  .slot input[type=file] { width:100%; font-size:.9rem; }
+  .thumb { margin-top:10px; position:relative; border-radius:12px; overflow:hidden; background:#f1ebe1; min-height:80px; }
+  .thumb canvas { display:block; width:100%; height:auto; }
+  .thumb .ph { padding:26px 10px; text-align:center; color:var(--soft); font-size:.9rem; }
+  .controls { display:flex; gap:10px; margin:14px 0; }
+  button { font:600 1rem system-ui,sans-serif; padding:12px 22px; border-radius:999px; border:2px solid var(--ink); background:transparent; color:var(--ink); cursor:pointer; white-space:nowrap; }
+  button.primary { background:var(--ink); color:#fff; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  :focus-visible { outline:3px solid #1a5fb4; outline-offset:3px; }
+  #status { font-size:1.1rem; min-height:1.6em; margin:12px 0; font-weight:600; }
+  .photos { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0; }
+  .photo { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .photo h3 { margin:0 0 6px; font-size:1.05rem; }
+  .photo dl { margin:0; color:var(--soft); font-size:.95rem; }
+  .photo dt { font-weight:600; color:var(--ink); display:inline; }
+  .photo dd { display:inline; margin:0; }
+  .photo .row { margin:2px 0; }
+  .warn { margin-top:10px; background:var(--warn-bg); color:var(--warn-ink); border:2px solid var(--warn-line); border-radius:12px; padding:10px 12px; font-size:.95rem; }
+  .warn strong { display:flex; gap:8px; align-items:center; }
+  .warn .icon { flex:none; width:22px; height:22px; border-radius:50%; background:var(--warn-line); color:#fff; display:grid; place-items:center; font-weight:700; font-size:.85rem; }
+  .skewbox { margin:8px 0 16px; background:var(--warn-bg); border:4px solid #b00020; border-radius:16px; padding:16px 18px; }
+  .skewbox h2 { margin:0; font-size:clamp(1.6rem, 6vw, 2.4rem); color:#111; display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; }
+  .skewbox .big-icon { flex:none; width:44px; height:44px; border-radius:50%; background:#b00020; color:#fff; display:grid; place-items:center; font-weight:800; font-size:1.7rem; }
+  .skewbox .red { color:#b00020; font-weight:800; letter-spacing:.02em; }
+  .skewbox p { margin:10px 0 0; font-size:1.05rem; color:var(--warn-ink); font-weight:600; }
+  .refusal { background:var(--warn-bg); color:var(--warn-ink); border:2px solid var(--warn-line); border-radius:16px; padding:14px 16px; font-weight:600; margin:14px 0; }
+  .refusal ul { margin:8px 0 0; padding-left:20px; font-weight:400; }
+  .choices { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0; }
+  .note { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:.95rem; color:var(--soft); margin:10px 0; }
+  #result h2 { margin-top:8px; }
+  .viewer { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:16px; text-align:center; touch-action: pan-y; }
+  .viewer .big { width:min(220px, 60vw); aspect-ratio:1; border-radius:50%; margin:6px auto 10px; border:1px solid rgba(0,0,0,.1); }
+  .viewer .name { font-weight:600; }
+  .viewer .code { color:var(--soft); font-size:.95rem; }
+  .viewer .nav { display:flex; gap:10px; justify-content:center; margin-top:10px; align-items:center; }
+  .viewer .count { color:var(--soft); font-size:.9rem; min-width:70px; }
+  .less { margin-top:22px; }
+  .lesslist { margin:0; padding-left:22px; color:var(--ink); }
+  .lesslist li { margin:4px 0; }
+  [hidden] { display:none !important; }
+  .pgrid { display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; margin:14px 0 0; }
+  .pgrid button { padding:0; border:1px solid rgba(0,0,0,.18); border-radius:10px; aspect-ratio:1; min-width:0; }
+  .pgrid button[aria-current=true] { outline:3px solid var(--ink); outline-offset:2px; }
+  details { margin-top:18px; color:var(--soft); font-size:.95rem; }
+  summary { cursor:pointer; font-weight:600; color:var(--ink); }
+  @media (max-width:480px) { .topnav { justify-content:flex-end; } .topnav .logo { display:none; } }
+  @media (max-width:600px) {
+    .slots, .photos { grid-template-columns:1fr; }
+    .controls button { padding:8px 14px; font-size:.85rem; }
+    .viewer { padding:12px 8px; }
+    .viewer .nav button { padding:6px 10px; font-size:.8rem; }
+    .pgrid { gap:5px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topnav"><a class="logo" href="index.html">Find my <span>Season</span></a><nav aria-label="Main"><a href="index.html">Home</a><a class="navbtn" href="find-my-season.html" aria-current="page">Find my Season</a></nav></header>
+  <h1>Find my Season</h1>
+  <div class="tips">
+    <strong style="color:var(--ink)">Photo requirements</strong>
+    <ul style="margin:4px 0 0;padding-left:22px">
+      <li><strong style="color:var(--ink)">Lighting:</strong> diffused daylight, no shadows (i.e. indoors with indirect light, overcast day, etc.)</li>
+      <li>Background is a white or light-colored wall</li>
+      <li>Center your face in the photo, shoulders up.</li>
+      <li>No filters</li>
+      <li>No makeup</li>
+      <li>No hat or sunglasses</li>
+    </ul>
+  </div>
+
+  <div class="slots">
+    <div class="slot">
+      <h3>Headshot Photo <small>(required)</small></h3>
+      <input type="file" id="f0" accept="image/*" aria-label="Choose headshot photo (required)">
+      <div class="thumb" id="t0"><div class="ph">No photo yet</div></div>
+    </div>
+    <div class="slot">
+      <h3>Want a more reliable diagnosis?</h3>
+      <p class="tips" style="margin:0 0 6px">Submit another headshot, this time taken in a different location or time of day (still following requirements). We will use it to double-check your result.</p>
+      <input type="file" id="f1" accept="image/*" aria-label="Choose confirming photo (optional)">
+      <div class="thumb" id="t1"><div class="ph">No photo yet</div></div>
+      <button type="button" id="rm1" hidden style="margin-top:8px;padding:6px 14px;font-size:.85rem">Remove this photo</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="find" class="primary" disabled>Find my Season</button>
+    <button id="reset">Reset</button>
+  </div>
+
+  <p id="status" role="status" aria-live="polite">Add a headshot photo to begin. A confirming photo is optional.</p>
+
+  <div id="photos" class="photos" hidden></div>
+  <div id="refusal" class="refusal" role="alert" hidden></div>
+  <div id="choices" class="choices" hidden>
+    <button id="anyway" class="primary">See results anyway</button>
+    <button id="resubmit">Resubmit</button>
+  </div>
+
+  <section id="result" hidden aria-live="polite">
+    <div id="skewbox" class="skewbox" hidden>
+      <h2><span class="big-icon" aria-hidden="true">!</span><span class="red">SKEWED RESULT:</span> <span id="skewseason"></span></h2>
+      <p id="skewnote"></p>
+    </div>
+    <h2 id="season"></h2>
+    <div id="closecall" class="note" hidden></div>
+    <div class="viewer" id="viewer">
+      <div class="big" id="big" role="img" aria-label=""></div>
+      <div class="name" id="cname"></div>
+      <div class="code" id="ccode"></div>
+      <div class="nav">
+        <button id="prev" aria-label="Previous color">&larr; Previous</button>
+        <span class="count" id="count"></span>
+        <button id="next" aria-label="Next color">Next &rarr;</button>
+      </div>
+    </div>
+    <div id="pgrid" class="pgrid" role="group" aria-label="Colors in this palette. Choose one to view it."></div>
+    <div class="less" id="lessbox">
+      <h2>Less Complementary Colors</h2>
+      <ul class="lesslist" id="less"></ul>
+    </div>
+    <details>
+      <summary>How this was worked out</summary>
+      <div id="how"></div>
+    </details>
+  </section>
+</div>
+
+<div class="banner" role="note">Your photos are analyzed on this device only. Nothing is uploaded, saved or sent.</div>
+<script>
+(function () {
+  // ===== Messages =====
+  var WARNING = "Nonwhite background detected. Results may not reflect true season. For most accurate diagnosis, resubmit photo with white background.";
+  var REFUSAL = "Poor lighting. Submit a new photo with diffused daylight lighting.";
+  var NOFACE  = "We couldn't find a face to read. Submit a new photo facing the camera, with your face centered and no sunglasses or heavy shadow.";
+
+  // ===== Color math (sRGB -> CIE Lab, D65) =====
+  function lin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+  function rgb2lab(r, g, b) {
+    r = lin(r); g = lin(g); b = lin(b);
+    var x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+    var y = (0.2126 * r + 0.7152 * g + 0.0722 * b);
+    var z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+    function f(t) { return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; }
+    var fx = f(x), fy = f(y), fz = f(z);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  }
+  function median(a) { a = a.slice().sort(function (p, q) { return p - q; }); var n = a.length; return n ? (n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2) : NaN; }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function dE(p, q) { return Math.sqrt(Math.pow(p[0] - q[0], 2) + Math.pow(p[1] - q[1], 2) + Math.pow(p[2] - q[2], 2)); }
+
+  // Sample a rectangle (fractions of canvas) -> {lab:[L,a,b] medians, clip:fraction of near-white pixels, sd:L std dev, n}
+  function sample(ctx, W, H, x0, y0, x1, y1) {
+    x0 = clamp(Math.round(x0 * W), 0, W - 1); x1 = clamp(Math.round(x1 * W), x0 + 1, W);
+    y0 = clamp(Math.round(y0 * H), 0, H - 1); y1 = clamp(Math.round(y1 * H), y0 + 1, H);
+    var d = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data, L = [], A = [], B = [], clip = 0, n = 0;
+    for (var i = 0; i < d.length; i += 4) {
+      var lab = rgb2lab(d[i], d[i + 1], d[i + 2]);
+      L.push(lab[0]); A.push(lab[1]); B.push(lab[2]); n++;
+      if (lab[0] > 96) clip++;
+    }
+    var m = median(L), s = 0;
+    L.forEach(function (v) { s += (v - m) * (v - m); });
+    return { lab: [m, median(A), median(B)], clip: n ? clip / n : 0, sd: n ? Math.sqrt(s / n) : 0, n: n };
+  }
+
+  // ===== Image loading =====
+  var files = [null, null], imgs = [null, null], urls = [null, null];
+  var KINDS = ['Headshot', 'Confirming'];
+
+  function loadImg(file) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file), im = new Image();
+      im.onload = function () { res({ im: im, url: u }); };
+      im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('Could not read this image')); };
+      im.src = u;
+    });
+  }
+  function toCanvas(im) {
+    var s = Math.min(1, 480 / Math.max(im.naturalWidth, im.naturalHeight));
+    var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * s)); c.height = Math.max(1, Math.round(im.naturalHeight * s));
+    c.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  // ===== Face box: on-device face detector (MediaPipe BlazeFace, files in /vendor/mediapipe) =====
+  // If the detector cannot load (for example when the page is opened as a plain file), fall back to a centered guess.
+  var detectorPromise = null;
+  function getDetector() {
+    if (detectorPromise) return detectorPromise;
+    detectorPromise = (async function () {
+      var base = new URL('vendor/mediapipe/', location.href).href;
+      var mod = await import(base + 'vision_bundle.mjs');
+      var fileset = await mod.FilesetResolver.forVisionTasks(base + 'wasm');
+      return await mod.FaceDetector.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: base + 'blaze_face_short_range.tflite' },
+        runningMode: 'IMAGE', minDetectionConfidence: 0.4
+      });
+    })().catch(function () { return null; });
+    return detectorPromise;
+  }
+  async function findFace(canvas) {
+    var W = canvas.width, H = canvas.height;
+    var guess = { x: 0.30, y: 0.22, w: 0.40, h: 0.50, how: 'estimated from the center of the photo', estimated: true };
+    var det = await getDetector();
+    if (!det) return guess;
+    var res;
+    try { res = det.detect(canvas); } catch (e) { return guess; }
+    var list = (res && res.detections) || [];
+    if (!list.length) return { notFound: true };
+    list.sort(function (a, b) { return b.boundingBox.width * b.boundingBox.height - a.boundingBox.width * a.boundingBox.height; });
+    var b = list[0].boundingBox;
+    return { x: b.originX / W, y: b.originY / H, w: b.width / W, h: b.height / H, how: 'found by an on-device face detector' };
+  }
+
+  // Lighting measurements on skin pixels only (pixels whose hue matches the cheeks), so eyes, brows, hair and lips do not count.
+  function skinMetrics(ctx, W, H, face, ref) {
+    var x0 = clamp(Math.round((face.x + face.w * 0.12) * W), 0, W - 1), x1 = clamp(Math.round((face.x + face.w * 0.88) * W), x0 + 1, W);
+    var y0 = clamp(Math.round((face.y + face.h * 0.08) * H), 0, H - 1), y1 = clamp(Math.round((face.y + face.h * 0.92) * H), y0 + 1, H);
+    var w = x1 - x0, h = y1 - y0, d = ctx.getImageData(x0, y0, w, h).data;
+    var Lm = new Float32Array(w * h), ok = new Uint8Array(w * h), Ls = [];
+    for (var i = 0, q = 0; i < d.length; i += 4, q++) {
+      var lab = rgb2lab(d[i], d[i + 1], d[i + 2]); Lm[q] = lab[0];
+      var dab = Math.sqrt(Math.pow(lab[1] - ref[1], 2) + Math.pow(lab[2] - ref[2], 2));
+      if (dab < 12 && lab[0] > 15) { ok[q] = 1; Ls.push(lab[0]); }
+    }
+    function pct(a, p) { a = a.slice().sort(function (m, n) { return m - n; }); return a.length ? a[Math.min(a.length - 1, Math.floor(p * a.length))] : NaN; }
+    var n = Ls.length, grads = [];
+    // 3x3 box blur, then gradient size, on skin pixels whose neighbours are also skin
+    for (var y = 2; y < h - 2; y++) for (var x = 2; x < w - 2; x++) {
+      var c = y * w + x; if (!ok[c] || !ok[c - 2] || !ok[c + 2] || !ok[c - 2 * w] || !ok[c + 2 * w]) continue;
+      function bl(cc) { return (Lm[cc - w - 1] + Lm[cc - w] + Lm[cc - w + 1] + Lm[cc - 1] + Lm[cc] + Lm[cc + 1] + Lm[cc + w - 1] + Lm[cc + w] + Lm[cc + w + 1]) / 9; }
+      grads.push(Math.abs(bl(c + 1) - bl(c - 1)) + Math.abs(bl(c + w) - bl(c - w)));
+    }
+    var p10 = pct(Ls, 0.1), p50 = pct(Ls, 0.5), p90 = pct(Ls, 0.9);
+    var hot = 0; Ls.forEach(function (v) { if (v > 86) hot++; });
+    return { n: n, share: n / (w * h), p10: p10, p50: p50, p90: p90, spread: p90 - p10, hotAbs: n ? hot / n : 0, edgeP95: pct(grads, 0.95), edgeMean: grads.length ? grads.reduce(function (s, v) { return s + v; }, 0) / grads.length : NaN };
+  }
+  // ===== Per-photo analysis =====
+  function analyze(canvas, face) {
+    var W = canvas.width, H = canvas.height, ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var fx = face.x, fy = face.y, fw = face.w, fh = face.h;
+
+    // Background: median of the outer edge strips
+    var strips = [sample(ctx, W, H, 0, 0, 0.08, 1), sample(ctx, W, H, 0.92, 0, 1, 1), sample(ctx, W, H, 0, 0, 1, 0.08)];
+    var bg = [median(strips.map(function (s) { return s.lab[0]; })), median(strips.map(function (s) { return s.lab[1]; })), median(strips.map(function (s) { return s.lab[2]; }))];
+    var bgC = Math.sqrt(bg[1] * bg[1] + bg[2] * bg[2]);
+
+    // Cheek patches + forehead patch
+    var cheekL = sample(ctx, W, H, fx + fw * 0.18, fy + fh * 0.50, fx + fw * 0.38, fy + fh * 0.68);
+    var cheekR = sample(ctx, W, H, fx + fw * 0.62, fy + fh * 0.50, fx + fw * 0.82, fy + fh * 0.68);
+    var fore   = sample(ctx, W, H, fx + fw * 0.35, fy + fh * 0.10, fx + fw * 0.65, fy + fh * 0.24);
+    var faceAll = sample(ctx, W, H, fx + fw * 0.15, fy + fh * 0.10, fx + fw * 0.85, fy + fh * 0.85);
+    var hairS  = sample(ctx, W, H, fx + fw * 0.30, Math.max(0, fy - fh * 0.12), fx + fw * 0.70, fy + fh * 0.04);
+
+    // Skin = average of cheeks (white-balance corrected only if the wall is nearly neutral)
+    var skin = [(cheekL.lab[0] + cheekR.lab[0]) / 2, (cheekL.lab[1] + cheekR.lab[1]) / 2, (cheekL.lab[2] + cheekR.lab[2]) / 2];
+    var refAB = skin.slice();
+    var wbUsed = false;
+    if (bgC < 9 && bg[0] > 60) { skin[1] -= bg[1]; skin[2] -= bg[2]; wbUsed = true; }
+    var skinC = Math.sqrt(skin[1] * skin[1] + skin[2] * skin[2]);
+    var skinHue = Math.atan2(skin[2], skin[1]) * 180 / Math.PI;
+    var skinLike = skin[0] > 22 && skin[0] < 90 && skin[1] > 2 && skin[1] < 30 && skin[2] > 6 && skin[2] < 38;
+
+    // Hair: only trust it if it differs from the wall
+    var hairFound = dE(hairS.lab, bg) > 12 && dE(hairS.lab, skin) > 6;
+
+    // Lighting heuristics
+    var asym = Math.abs(cheekL.lab[0] - cheekR.lab[0]);
+    var clip = faceAll.clip;
+    var texture = (cheekL.sd + cheekR.sd + fore.sd) / 3;
+    var sm = skinMetrics(ctx, W, H, face, refAB);
+    var lightIssues = [];
+    if (skin[0] < 25) lightIssues.push('face is too dark');
+    if (skin[0] > 92) lightIssues.push('face is overexposed');
+    if (asym > 25) lightIssues.push('one side of the face is much brighter than the other (strong side or direct light)');
+    if (clip > 0.10) lightIssues.push('bright hot spots on the face (flash or direct light)');
+    // Slight shadows are fine in diffused light, so there is no check for uneven light.
+
+    return {
+      face: face, bg: bg, bgC: bgC, skin: skin, skinC: skinC, skinHue: skinHue, skinLike: skinLike,
+      hair: hairFound ? hairS.lab : null, wbUsed: wbUsed,
+      asym: asym, clip: clip, texture: texture, sm: sm,
+      lightOk: lightIssues.length === 0, lightIssues: lightIssues,
+      // White, off-white, light gray and cream pass: light and low-chroma (cream allowed a little more yellow)
+      bgOk: bg[0] >= 78 && bgC <= 22 && (bg[2] >= -4) && Math.abs(bg[1]) <= 10,
+      cheekBoxes: [[fx + fw * 0.18, fy + fh * 0.50, fx + fw * 0.38, fy + fh * 0.68], [fx + fw * 0.62, fy + fh * 0.50, fx + fw * 0.82, fy + fh * 0.68]],
+      hairBox: [fx + fw * 0.30, Math.max(0, fy - fh * 0.12), fx + fw * 0.70, fy + fh * 0.04]
+    };
+  }
+
+  function bgName(lab, C) {
+    var L = lab[0];
+    if (L >= 78 && C <= 22 && lab[2] >= -4 && Math.abs(lab[1]) <= 10) {
+      if (C < 5) return L > 92 ? 'White' : 'Light gray';
+      return lab[2] > 8 ? 'Cream / off-white' : 'Off-white';
+    }
+    if (L < 40) return 'Dark ' + hueName(lab);
+    return hueName(lab) + (L < 70 ? ', mid-tone' : '');
+  }
+  function hueName(lab) {
+    var C = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+    if (C < 8) return L_gray(lab[0]);
+    var h = Math.atan2(lab[2], lab[1]) * 180 / Math.PI; if (h < 0) h += 360;
+    if (h < 20 || h >= 340) return 'Red / pink'; if (h < 55) return 'Orange / brown'; if (h < 100) return 'Yellow / tan';
+    if (h < 170) return 'Green'; if (h < 250) return 'Blue / teal'; if (h < 300) return 'Purple'; return 'Magenta';
+  }
+  function L_gray(L) { return L > 70 ? 'Light gray' : L > 35 ? 'Gray' : 'Black / charcoal'; }
+
+  // ===== Season model: undertone (t), depth (d), clarity (c) =====
+  var CENTROIDS = {
+    'True Spring':   [ 0.8, 0.35, 0.70], 'Light Spring':  [ 0.4, 0.15, 0.50], 'Bright Spring': [ 0.4, 0.40, 0.95],
+    'True Summer':   [-0.8, 0.35, 0.35], 'Light Summer':  [-0.4, 0.15, 0.40], 'Soft Summer':   [-0.4, 0.45, 0.10],
+    'True Autumn':   [ 0.8, 0.60, 0.35], 'Soft Autumn':   [ 0.4, 0.45, 0.10], 'Deep Autumn':   [ 0.4, 0.90, 0.40],
+    'True Winter':   [-0.8, 0.70, 0.80], 'Deep Winter':   [-0.4, 0.95, 0.55], 'Bright Winter': [-0.4, 0.55, 1.00]
+  };
+  function dimensions(ms) {
+    var n = ms.length, skin = [0, 0, 0], hairs = [], hue = 0, C = 0;
+    ms.forEach(function (m) { skin[0] += m.skin[0] / n; skin[1] += m.skin[1] / n; skin[2] += m.skin[2] / n; if (m.hair) hairs.push(m.hair); });
+    hue = Math.atan2(skin[2], skin[1]) * 180 / Math.PI; C = Math.sqrt(skin[1] * skin[1] + skin[2] * skin[2]);
+    var hairL = hairs.length ? hairs.reduce(function (s, h) { return s + h[0]; }, 0) / hairs.length : null;
+    var depthL = hairL === null ? skin[0] : 0.5 * skin[0] + 0.5 * hairL;
+    var t = clamp((hue - 58) / 8, -1, 1);                       // cool (-1) to warm (+1)
+    var d = clamp((72 - depthL) / 40, 0, 1);                     // light (0) to deep (1)
+    var contrast = hairL === null ? null : Math.abs(skin[0] - hairL);
+    var c = contrast === null ? clamp((C - 16) / 20, 0, 1) : clamp(0.35 * (contrast / 55) + 0.65 * ((C - 16) / 20), 0, 1); // soft (0) to clear (1)
+    return { t: t, d: d, c: c, skin: skin, hue: hue, chroma: C, hairL: hairL, contrast: contrast };
+  }
+  function classify(dim) {
+    var scored = Object.keys(CENTROIDS).map(function (name) {
+      var k = CENTROIDS[name];
+      return { name: name, dist: Math.sqrt(Math.pow((dim.t - k[0]) * 1.4, 2) + Math.pow((dim.d - k[1]) * 1.6, 2) + Math.pow((dim.c - k[2]) * 0.9, 2)) };
+    }).sort(function (a, b) { return a.dist - b.dist; });
+    return { season: scored[0].name, close: (scored[1].dist - scored[0].dist) < 0.08 };
+  }
+  var WORDS = {
+    t: function (v) { return v > 0.35 ? 'warm' : v < -0.35 ? 'cool' : 'neutral-leaning'; },
+    d: function (v) { return v < 0.3 ? 'light' : v > 0.65 ? 'deep' : 'medium'; },
+    c: function (v) { return v < 0.3 ? 'soft' : v > 0.65 ? 'clear' : 'medium'; }
+  };
+
+  // ===== Palettes =====
+  function pal(names, hex) { var n = names.split('|'), h = hex.split(' '); return n.map(function (x, i) { return [x, '#' + h[i]]; }); }
+  var TRUE_WINTER = pal("Brilliant White|Lily White|Silver Birch|Mourning Dove|Brushed Nickel|Tender Touch|Elfin Yellow|Misty Jade|Spa Retreat|Halogen Blue|Pirouette|Bonbon|Strawberry Moon|Very Berry|Wild Aster|Lilac Chiffon|Violet|Radiant Orchid|Hollyhock|Charisma|Persian Jewel|Amparo Blue|Surf the Web|Bellwether Blue|Ocean Cavern|Cyan Blue|Faience|Spectra Green|Tidepool|Green Heron|Gentian Violet|Navy Blue|Medieval Blue|Bracken|Molé",
+    "edf1ff e2e2da d2cfc4 95908b 73706f f3d4df eeea97 bcd9c8 b4e8ec bdc6dc edbedc f1a6cc da6ca1 b73275 92316f de9bc4 c180b5 ac5d98 823270 642b60 6e81be 4a5fa5 203c7f 23305b 252a48 15a3c7 2a6a8b 009b8c 086f69 27535a 544275 403f6f 2a304e 4e3e3a 392c2b");
+  // "Less Complementary Colors": plain-language descriptions, no swatches.
+  // Light Spring, Light Summer and True Summer are Anne's own text. The other nine are paraphrased from the concept wardrobe guides ("Colours to Avoid" sections).
+  var LESS = {
+    'Light Spring':  ['Black, dark grey, deep burgundy and dark olive', 'Icy tones, such as icy blue or silver'],
+    'Light Summer':  ['Strong shades such as black, orange, bright yellow and deep browns', 'Warm, earthy tones such as rust, mustard and olive green'],
+    'True Summer':   ['Warm oranges, bright yellow and tomato red', 'Black, warm browns and golden tones'],
+    'True Spring':   ['Very cool colors, such as icy blues and greys', 'Muted, toned-down colors, such as dusty blues and muddy browns', 'Dark, harsh colors such as deep blues and purples (black and white are fine)'],
+    'Bright Spring': ['Muted, toned-down colors, such as dusty blues and muddy browns', 'Very cool colors, such as icy blues and greys'],
+    'Soft Summer':   ['Vibrant colors such as intense pinks and blues (black and white excepted)', 'Rich, warm colors such as orangey reds and earthy browns'],
+    'True Autumn':   ['Cool, bright colors such as pastel pink and ice blue (black and white excepted)', 'Extremely bright, vibrant colors such as intense pinks and blues'],
+    'Soft Autumn':   ['Vibrant colors such as intense oranges', 'Dark colors such as deep purples and blues', 'Very cool colors such as black, white and blueish greys'],
+    'Deep Autumn':   ['White, pastels and other toned-down colors such as dusty blues and pinks', 'Very cool, frosty colors such as intense pinks and blueish greys'],
+    'True Winter':   ['Warm, earthy colors such as golden browns and rusty oranges', 'Soft, muted colors such as dusty blues and lavender (icy pastels work as accents with dark neutrals)'],
+    'Deep Winter':   ['Very warm, earthy colors such as golden oranges and browns', 'Warmer pastels', 'Desaturated, toned-down colors such as dusty yellows'],
+    'Bright Winter': ['Rich, warm shades such as orangey browns and golden yellows', 'Soft, toned-down earth tones such as pale gold and muted brown']
+  };
+  // Palettes for the other 11 seasons. Source: the concept wardrobe, "<Season>: A Comprehensive Guide", palette image (same source as True Winter).
+  // Names are as printed on each image. Codes were sampled from the images (median of each swatch), so they are close on-screen matches, not official Pantone values.
+  // Deep Autumn and Deep Winter are listed as "Dark Autumn" and "Dark Winter" on that site.
+  var PALETTES = {
+    'True Spring': pal("Vanilla|Sun Kiss|Golden Fleece|Jojoba|Desert Mist|Golden Mist|Moonstone|Pale Gold|Dachshund|Demitasse|Impala|Sunshine|Yarrow|Mimosa|Amber|Burnt Coral|Emberglow|Cayenne|Georgia Peach|Hibiscus|Windsurfer|Della Robbia Blue|Marina|Directoire Blue|True Blue|Spring Bouquet|Irish Green|Biscay Green|Holly Green|Bosphorus|Daiquiri Green|Bright Chartreuse|Titanite|Salted Lime|First Tee",
+      "f3e2c1 ebd1ba f2d1a1 dabd80 e0b588 d6cd95 cdb584 bd9865 704f36 3f332b f7ce97 fadd85 face6e efc05a efad56 e9897e e9685a e04950 f97373 de3847 a3bbe0 799dca 5086c3 0161a2 1f4477 6ece87 45be75 57c6aa 0f9e77 017557 c8d77e b6bf51 90ab39 5f843c 00713b"),
+    'Light Spring': pal("Shortbread|Whitecap Gray|Alabaster Gleam|Lamb's Wool|Boulder|Ancient Scroll|Agate Gray|Driftwood|Bungee Cord|Chocolate Chip|Lemon Verbena|Lemon Drop|Beach Ball|Golden Haze|Sunset Gold|Strawberry Cream|Blossom|Candlelight Peach|Peach Blossom|Sun Kissed Coral|Lavender|Bougainvillea|Deep Lavender|Natural|Raw Umber|Atomizer|Baltic Sea|Blue Topaz|Blue Curacao|Blue Moon|Lettuce Green|Jade Lime|Bud Green|Poison Green|Mint",
+      "efdcc3 e0d5c6 f0debd e5d0b1 d1be9b cbc3b7 b3b1a1 847a75 696156 685a4e f4e87a fdd878 f3c65f fbd897 f7c46c f4c3c4 f2b2ae f8a39d eb8888 ea6676 afa4ce 9883b9 775496 aa907d 92705f 9ad4ea 7ab6d9 78bdd4 33becc 3686a0 bed38e a1ca7b 79b465 4db560 0f9d76"),
+    'Bright Spring': pal("Snow White|Vanilla Ice|Rutabaga|Summer Sand|Oatmeal|Silver Lining|Brindle|Chimera|Imperial Blue|Déjà Vu Blue|Aspen Gold|Pale Marigold|Artisan's Gold|Buckskin|Aurora Red|Orchid Pink|Geranium Pink|Hot Pink|Pink Lemonade|Geranium|Fuchsia Pink|Raspberry Rose|Raspberry Radiance|Nouvean Navy|Mazarine Blue|Blue Radiance|Peacock Blue|Tropical Green|Bachelor Button|Mosaic Blue|Sharp Green|Macaw Green|Online Lime|Rolling Hills|Formal Garden",
+      "f1f0ec f0eada ecdcbd d7ccbb cac3b3 bdb6ab 83776b 4d4c48 005b93 18406b ffd662 fec66e f1ab46 d18f55 b93b33 f4bbca f6909e e35c7c ee6e8b da3c58 e088b8 cb4385 802a50 395589 263d77 59c9d5 00a0b1 108780 4bbbd5 00758f c7e67a 9bb53f 43883d 22794a 1f512a"),
+    'True Summer': pal("Light Gray|Perfectly Pale|Silver Cloud|Rock Ridge|Major Brown|Lunar Rock|Ashes of Roses|Purple Dove|Moonscape|Forged Iron|Dusty Blue|Troposphere|Gray Mist|Trooper|Turbulence|Sea Pink|Chateau Rose|Bubblegum|Carmine|Anemone|Baby Lavender|Deep Periwinkle|Corsican Blue|Orient Blue|Blue Ribbon|Crystal Seas|Wave Ride|Ipanema|Larkspur|Saxony Blue|Neptune Green|Ming Green|Ivy|Teal|Chesapeake Bay",
+      "dad8c9 d3c9be beb7b0 918c86 605752 c5c5c5 b5acab 99888d 73606a 48464a 8c9dad 76849b 99aeae 697a7e 4e545b de98ab d2738f e9738d bc4869 842c48 a2a9d1 7c83bc 646093 48457a 3a395f 5eb0cf 2d80a7 62bbc5 3c7d90 1f6680 7fbb9e 3aa278 226c63 478589 16525a"),
+    'Light Summer': pal("Tofu|Bone White|Pelican|Atmosphere|Silent Storm|Shadow Gray|Toadstool|Peppercorn|Plum Truffle|Catawba Grape|Salmon Rose|Dubarry|Sugar Coral|Paradise Pink|Winterberry|Candy Pink|Confetti|Sachet Pink|Carmine Rose|Lilac Rose|Open Air|Vista Blue|Granada Sky|Star Sapphire|Turkish Sea|Blue Elixir|River Blue|Capri|Baltic|Pagoda Blue|Cabbage|Mint Leaf|Sea Green|Simply Green|Antique Green",
+      "e8e4da d6d1c0 c1bcac a89c94 827d77 bba5a0 967c7f 6c5656 675758 5d3c43 ff8d94 f25f66 f56c73 e4455e be394f f5b0bd e6798e f18aad e35b8f bd4275 94b2df 80a0d4 5d81bc 36629f 1a5190 8dccdd 38aecd 44bbca 279d9f 1b7f8e 63dbbf 02b694 159c88 1a9e74 2a675c"),
+    'Soft Summer': pal("Icicle|Birch|Chateau Gray|Satellite|Iron|Mirage Gray|Sedona Sage|Gray Quill|Thunderstorm|Raven|English Rose|Quartz Pink|Flowering Ginger|Slate Rose|Earth Red|Cameo Pink|Wild Rose|Mesa Rose|Hawthorn Rose|Blackberry Wine|Icelandic Blue|Purple Impression|Lavender Violet|Heron|Mood Indigo|Leisure Time|Porcelain|Hydro|Arctic|Atlantic Deep|Meadow|Beryl Green|Hunter Green|Garden Glade|Shadow Green",
+      "dbddd1 ddd5c7 bbb1a8 978d89 736460 abafae 686d6c 7b797b 5b585a 413e3d f4c6c3 efa6aa e78b90 b45865 95424e dba9b7 ce8498 a76e7a 884c5e 4e3246 aaadc2 858fb1 767ba5 62617e 353a4c 7fbfc5 5d9ca4 426972 648589 274e55 89c099 619187 335749 dcd8a8 cfc486"),
+    'True Autumn': pal("Seedpearl|Angora|Fog|Double Cream|Straw|Tidal Foam|Oil Green|Lead Gray|Stone Gray|Deep Depths|Peach Nougat|Peach Bloom|Cedar Wood|Henna|Chicory Coffee|Muskmelon|Amberglow|Orange Rust|Summer Fig|Picante|Peach Amber|Porcelain Rose|American Beauty|Merlot|Maroon Banner|Sea Jet|Bayou|Blue Mist|Biscay Bay|Deep Teal|Beechnut|Fern|Split Pea|Fir Green|Forest Night",
+      "e6dac4 dfd1bb d0c5b1 f3e0ac e0c992 bfb9a3 80856d 8a7963 685e4f 46483d e6af91 d99b7c a1665b 7c423c 4b342f ec935e dc793e c25a3c be4b3b 8d3f2d fb9f93 ea6b6a a73340 73272d 5b2b38 54afbc 20706f 5bacc3 097988 19454b c2c18d 9aa067 9c9a40 67592a 434237"),
+    'Soft Autumn': pal("Sweet Corn|White Asparagus|Turtledove|Overcast|Bog|Sage Green|Aloe|Olive Night|Sage|Beetle|Burlwood|Russet|Carob Brown|Hot Chocolate|Rum Raisin|Coral Almond|Tea Rose|Holly Berry|Crabapple|Cardinal|Crystal Rose|Murex Shell|Faded Rose|Baroque Rose|Tibetan Red|Dusk Blue|Blue Jasper|High Tide|Deep Dive|Estate Blue|Ocean Wave|Dusty Jade Green|Bottle Green|Bristol Blue|Mallard Green",
+      "f0ebd7 e1dbc9 ded7c8 c3bdab bab696 a7a781 817a60 535040 91946e 56584c 9b716b 905f51 855c4b 683b39 583432 e29d93 dc7178 b44e5d d77e70 ad3e48 fdc3c6 f8a3a4 bf6464 b35a66 782a39 7ba0c0 527ea9 345e8b 29495c 233658 8ec5b6 7bb5a3 437d6d 568f91 405e5c"),
+    'Deep Autumn': pal("White Swan|Smoke Gray|Summer Melon|Autumn Blonde|Latté|French Oak|Elephant Skin|Tarmac|Savannah Tan|Pavement|Ochre|Mustard Gold|Cathay Spice|Butterum|Sunburn|Blooming Dahlia|Burnt Sienna|Cranberry|Burnt Russet|Pomegranate|Pastel Lavender|Spring Crocus|Rosé Sorbet|Plum Caspia|Titan|Bermuda|Lagoon|Frosty Spruce|Evergreen|Green Gables|Willow|Plantation|Military Olive|Wren|Glamour Gold",
+      "e4d7c5 cebba8 ead3ae eecfad c5a582 cbc1b3 8f8982 5a5348 a69483 534d50 d6af66 b08e51 99642c c68f65 b37256 ec9688 c65d52 bb4a4d 7e3940 6c2831 d8a1c4 ba69a1 a3497c 61234a 263b51 60c8b3 4d9e9a 578270 12574a 324241 9a8b4f 7a6332 63563b 4b4139 be9b64"),
+    'Deep Winter': pal("Lucent White|Vaporous Gray|Pumice Stone|Ghost Gray|Charcoal Gray|Lemonade|Ballet Slipper|Bay|Spun Sugar|Purple Heather|Plumeria|Fruit Dove|Bossy Pink|Innuendo|Red Bud|Lipstick Red|Scarlet Smile|Rio Red|Rhubarb|Zinfandel|African Violet|Bellflower|Plum Jam|Grape Royale|Baritone Blue|Splish Splash|Mediterranean Blue|Moroccan Blue|Deep Water|Pageant Blue|Marine Green|Lush Meadow|Forest Biome|Ponderosa Pine|Tap Shoe",
+      "f4f7ff dfddd7 cac2b9 9c9b98 6c6868 f0e79d ecced5 bae5d6 b4dcea bab8d3 fb90a2 cf5c78 ce3d66 c43362 962d49 b31b38 9f2436 8a2232 77202f 5d2935 b085b7 9469a2 634177 502e55 262735 69bbdd 1578a7 104e67 266691 1f2c43 40a48e 006e52 194b46 1e3a3c 2a2b2d"),
+    'Bright Winter': pal("Bright White|Arctic Wolf|Abbey Stone|Steeple Gray|Steel Gray|Pastel Yellow|Pink Dogwood|Fair Aqua|Festival Bloom|Pastel Lilac|Ranunculus|Honeysuckle|Raspberry Sorbet|Vivacious|Red Plum|Fuchsia Purple|Fuchsia Fedora|Fuchsia Red|Rose Violet|Purple Wine|Iolite|Blue Iris|Bluing|Ultramarine|Dazzling Blue|Aged Copper|Viridian Green|Blue Blossom|Blithe|Turkish Tile|Black Iris|Black Ink|Blackened Pearl|Pirate Black|Anthracite",
+      "f4f9ff e6decf aba798 827e7c 726f70 f2e6b1 f7d1d1 b8e2dc f5d6e6 bfb4cb ec8b8d d94f71 d2386c a32857 7c2946 d4367a ca4286 ab3475 c0428a 8c3573 707bb4 5a5b9f 333e83 5b7ebd 3950a0 5cc8d7 009499 2da8d8 0084bd 00698b 2b3042 45413c 4e4b51 373838 28282d")
+  };
+  PALETTES['True Winter'] = TRUE_WINTER;
+
+  // ===== UI helpers =====
+  var $ = function (id) { return document.getElementById(id); };
+  var palette = [], idx = 0, current = null;
+
+  function drawThumb(i, canvas, m) {
+    var host = $('t' + i); host.innerHTML = '';
+    var c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
+    var x = c.getContext('2d'); x.drawImage(canvas, 0, 0);
+    if (m) {
+      var W = c.width, H = c.height; x.lineWidth = Math.max(2, W / 200);
+      function box(b, col) { x.strokeStyle = col; x.strokeRect(b[0] * W, b[1] * H, (b[2] - b[0]) * W, (b[3] - b[1]) * H); }
+      x.setLineDash([]); box([m.face.x, m.face.y, m.face.x + m.face.w, m.face.y + m.face.h], '#ffffff');
+      m.cheekBoxes.forEach(function (b) { box(b, '#00a86b'); });
+      if (m.hair) box(m.hairBox, '#1a5fb4');
+    }
+    c.setAttribute('role', 'img'); c.setAttribute('aria-label', KINDS[i] + ' photo preview');
+    host.appendChild(c);
+  }
+
+  function updateFind() { $('find').disabled = !files[0]; $('rm1').hidden = !files[1]; }
+
+  function clearResults() {
+    $('photos').hidden = true; $('photos').innerHTML = '';
+    $('refusal').hidden = true; $('refusal').innerHTML = '';
+    $('choices').hidden = true; $('result').hidden = true; current = null;
+  }
+
+  function pick(i, file) {
+    clearResults();
+    if (urls[i]) { URL.revokeObjectURL(urls[i]); urls[i] = null; }
+    files[i] = null; imgs[i] = null;
+    if (!file) { $('t' + i).innerHTML = '<div class="ph">No photo yet</div>'; updateFind(); return; }
+    if (!/^image\//.test(file.type)) { $('status').textContent = 'That file is not an image. Choose a JPG or PNG photo.'; $('f' + i).value = ''; updateFind(); return; }
+    loadImg(file).then(function (r) {
+      files[i] = file; urls[i] = r.url; imgs[i] = toCanvas(r.im);
+      drawThumb(i, imgs[i], null); updateFind();
+      $('status').textContent = !files[0] ? 'Add your headshot photo to continue.' : files[1] ? 'Both photos added. Click Find my Season.' : 'Photo added. Click Find my Season, or add an optional confirming photo first.';
+    }, function () { $('status').textContent = 'We could not open that file. Try a JPG or PNG.'; $('f' + i).value = ''; updateFind(); });
+  }
+  $('f0').addEventListener('change', function (e) { pick(0, e.target.files[0]); });
+  $('f1').addEventListener('change', function (e) { pick(1, e.target.files[0]); });
+  $('rm1').addEventListener('click', function () { $('f1').value = ''; pick(1, null); $('status').textContent = 'Confirming photo removed.'; });
+
+  function renderPhotos(ms, showWarn, showLight) {
+    var box = $('photos'); box.innerHTML = '';
+    ms.forEach(function (m, i) {
+      var d = document.createElement('div'); d.className = 'photo';
+      d.innerHTML = '<h3></h3><dl><div class="row"><dt>Light: </dt><dd></dd></div><div class="row"><dt>Background: </dt><dd></dd></div></dl>';
+      d.querySelector('h3').textContent = KINDS[i] + ' photo';
+      var dd = d.querySelectorAll('dd');
+      dd[0].textContent = m.lightOk ? 'Diffused, even light' : m.lightIssues.join('; ');
+      dd[1].textContent = bgName(m.bg, m.bgC);
+      if (showLight && !m.lightOk) {
+        var wl = document.createElement('div'); wl.className = 'warn';
+        wl.innerHTML = '<strong><span class="icon" aria-hidden="true">!</span><span>Warning on this photo</span></strong><p style="margin:6px 0 0"></p>';
+        wl.querySelector('p').textContent = REFUSAL; d.appendChild(wl);
+      }
+      if (showWarn && !m.bgOk) {
+        var w = document.createElement('div'); w.className = 'warn';
+        w.innerHTML = '<strong><span class="icon" aria-hidden="true">!</span><span>Warning on this photo</span></strong><p style="margin:6px 0 0"></p>';
+        w.querySelector('p').textContent = WARNING; d.appendChild(w);
+      }
+      box.appendChild(d);
+    });
+    box.hidden = false;
+  }
+
+  function showSeason(ms, skewed) {
+    // With a confirming photo: if both agree, combine them. If they disagree, use the required photo alone (blending opposite readings can land on a season neither photo supports).
+    var sa = null, sb = null, used = ms;
+    if (ms.length === 2) { sa = classify(dimensions([ms[0]])).season; sb = classify(dimensions([ms[1]])).season; if (sa !== sb) used = [ms[0]]; }
+    var dim = dimensions(used), res = classify(dim), season = res.season;
+    $('skewbox').hidden = !skewed; $('season').hidden = !!skewed;
+    if (skewed) {
+      var ln = [], bn = []; ms.forEach(function (m, i) { var n = KINDS[i].toLowerCase() + ' photo'; if (!m.lightOk) ln.push(n); if (!m.bgOk) bn.push(n); });
+      $('skewseason').textContent = season;
+      var parts = []; if (ln.length) parts.push('Poor lighting on the ' + ln.join(' and the ') + '.'); if (bn.length) parts.push('Nonwhite background on the ' + bn.join(' and the ') + '.');
+      var fix = (ln.length ? 'diffused daylight' : '') + (ln.length && bn.length ? ' and ' : '') + (bn.length ? 'a white background' : '');
+      $('skewnote').textContent = parts.join(' ') + ' This result may not reflect your true season. Resubmit with ' + fix + ' for the most accurate result.';
+    }
+    $('season').textContent = 'Looking Beautiful, ' + season;
+    var cc = $('closecall'), notes = [];
+    if (ms.length === 2) {
+      notes.push(sa === sb ? 'Your confirming photo agrees with your first photo.' :
+        'Your confirming photo read differently (' + sb + '), so this result uses your headshot photo only. For a firmer answer, retake both in the same daylight spot.');
+    }
+    if (res.close) notes.push(ms.length === 2 ? 'This was also a close call between neighboring seasons.' : 'This was a close call between neighboring seasons. Adding a confirming photo in good daylight can help.');
+    cc.hidden = !notes.length; cc.textContent = notes.join(' ');
+
+    palette = PALETTES[season]; idx = 0; $('pgrid').innerHTML = '';
+    showColor();
+    var g = $('less'); g.innerHTML = '';
+    LESS[season].forEach(function (t) { var li = document.createElement('li'); li.textContent = t; g.appendChild(li); });
+
+    var how = $('how'); how.innerHTML = '';
+    var p = document.createElement('p');
+    p.textContent = 'From your photos we measured: undertone ' + WORDS.t(dim.t) + ', depth ' + WORDS.d(dim.d) + ', clarity ' + WORDS.c(dim.c) +
+      '. Skin was sampled from the cheeks (green boxes on the previews)' + (dim.hairL === null ? '; hair could not be separated from the background, so depth and clarity use skin only.' : ' and hair from just above the forehead (blue box).') +
+      ' Eye color is not measured yet. The 12-season system is a style convention, not a tested classification, and phone cameras shift color, so treat this as a strong starting point.';
+    how.appendChild(p);
+    $('result').hidden = false;
+  }
+
+  function showColor() {
+    var c = palette[idx];
+    $('big').style.background = c[1]; $('big').setAttribute('aria-label', (c[0] ? c[0] + ' ' : '') + c[1]);
+    $('cname').textContent = c[0] || ''; $('ccode').textContent = c[1];
+    $('count').textContent = (idx + 1) + ' of ' + palette.length;
+    var pg = $('pgrid');
+    if (!pg.children.length) palette.forEach(function (p, i) {
+      var x = document.createElement('button'); x.type = 'button';
+      x.style.background = p[1]; x.setAttribute('aria-label', (p[0] ? p[0] + ' ' : '') + p[1]); if (p[0]) x.title = p[0];
+      x.addEventListener('click', function () { idx = i; showColor(); }); pg.appendChild(x);
+    });
+    Array.prototype.forEach.call(pg.children, function (x, i) { x.setAttribute('aria-current', i === idx ? 'true' : 'false'); });
+  }
+  function step(n) { idx = (idx + n + palette.length) % palette.length; showColor(); }
+  $('prev').addEventListener('click', function () { step(-1); });
+  $('next').addEventListener('click', function () { step(1); });
+  $('viewer').addEventListener('keydown', function (e) { if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
+  var sx = null;
+  $('viewer').addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; }, { passive: true });
+  $('viewer').addEventListener('touchend', function (e) {
+    if (sx === null) return; var dx = e.changedTouches[0].clientX - sx; sx = null;
+    if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1);
+  });
+
+  function refuse(msg, bullets) {
+    var r = $('refusal'); r.innerHTML = ''; var s = document.createElement('div'); s.textContent = msg; r.appendChild(s);
+    if (bullets && bullets.length) { var u = document.createElement('ul'); bullets.forEach(function (b) { var li = document.createElement('li'); li.textContent = b; u.appendChild(li); }); r.appendChild(u); }
+    r.hidden = false; $('status').textContent = msg;
+  }
+
+  // Test hook: lets a developer run the pipeline on canvases without using the file picker.
+  async function run(canvases) {
+    clearResults();
+    var ms = [];
+    var missing = false;
+    for (var i = 0; i < canvases.length; i++) {
+      var f = await findFace(canvases[i]);
+      if (f.notFound) { missing = true; drawThumb(i, canvases[i], null); continue; }
+      ms.push(analyze(canvases[i], f));
+    }
+    if (missing) { refuse(NOFACE); return { stage: 'noface', ms: ms }; }
+    ms.forEach(function (m, i) { drawThumb(i, canvases[i], m); });
+    // 0. a face-like patch must be found, per photo
+    var noFace = ms.some(function (m) { return m.face.estimated && !m.skinLike; });
+    if (noFace) { renderPhotos(ms, false); refuse(NOFACE); return { stage: 'noface', ms: ms }; }
+    // 1. lighting first, per photo
+    if (ms.some(function (m) { return !m.lightOk; })) {
+      renderPhotos(ms, false, true);
+      current = ms;
+      $('status').textContent = REFUSAL + ' Choose See results anyway or Resubmit.';
+      $('choices').hidden = false; return { stage: 'light', ms: ms };
+    }
+    // 2. background, per photo
+    renderPhotos(ms, true);
+    current = ms;
+    if (ms.some(function (m) { return !m.bgOk; })) {
+      $('status').textContent = 'Background warning. Choose See results anyway or Resubmit.';
+      $('choices').hidden = false; return { stage: 'bg', ms: ms };
+    }
+    $('status').textContent = 'Requirements met. Finding your season now!';
+    showSeason(ms, false);
+    return { stage: 'done', ms: ms, season: $('season').textContent.replace('Looking Beautiful, ', '') };
+  }
+  window.__run = run; window.__classify = function (ms) { var d = dimensions(ms); return { dim: d, res: classify(d) }; };
+
+  $('find').addEventListener('click', function () {
+    if (!imgs[0]) return;
+    $('status').textContent = 'Reading your photos...';
+    run(imgs[1] ? [imgs[0], imgs[1]] : [imgs[0]]);
+  });
+  $('anyway').addEventListener('click', function () {
+    $('choices').hidden = true;
+    $('status').textContent = 'Skewed result shown. The warning is still on the flagged photo.';
+    renderPhotos(current, true, true);
+    showSeason(current, true);
+  });
+  $('resubmit').addEventListener('click', function () {
+    clearResults();
+    $('status').textContent = 'Take a new photo that meets the photo requirements, then add it above.';
+  });
+  $('reset').addEventListener('click', function () {
+    clearResults();
+    [0, 1].forEach(function (i) { if (urls[i]) URL.revokeObjectURL(urls[i]); urls[i] = null; files[i] = null; imgs[i] = null; $('f' + i).value = ''; $('t' + i).innerHTML = '<div class="ph">No photo yet</div>'; });
+    $('find').disabled = true;
+    $('rm1').hidden = true;
+    $('status').textContent = 'Add a headshot photo to begin. A confirming photo is optional.';
+  });
+  [0, 1].forEach(function (i) { $('f' + i).value = ''; });
+})();
+</script>
+</body>
+</html>
