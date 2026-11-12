@@ -100,6 +100,10 @@
   .tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 26px; }
   .tabs button { font: 600 .95rem var(--sans); padding: 10px 20px; border-radius: 999px; border: 2px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--ink); color: #fff; }
+  .tabs.subtabs { margin-top: -10px; }
+  .tabs.subtabs button { font-size: .85rem; padding: 7px 16px; border-width: 1.5px; border-color: var(--line); color: var(--ink-soft); }
+  .tabs.subtabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .less ul { list-style: none; margin: 16px auto 0; padding: 0; max-width: 560px; display: grid; gap: 6px; color: var(--ink-soft); font-size: .95rem; }
   .swatch-row i, .chip i { transition: background-color .3s; }
 
   /* checks */
@@ -212,16 +216,17 @@
       <div class="section-head">
         <span class="pill">Sample result</span>
         <h2 id="pal-h">A palette you can keep using</h2>
-        <p>Here is a preview of what a result looks like. Switch between the four main seasons to see each palette. The full app uses all 12 seasons.</p>
+        <p>Here is a preview of what a result looks like. Choose a season, then pick a sub-season to see its palette. The app covers all 12.</p>
       </div>
-      <div class="tabs" role="tablist" aria-label="Choose a season to preview">
-        <button role="tab" id="tab-winter" aria-selected="true" aria-controls="palette-grid" data-season="winter" tabindex="0">True Winter</button>
-        <button role="tab" id="tab-spring" aria-selected="false" aria-controls="palette-grid" data-season="spring" tabindex="-1">True Spring</button>
-        <button role="tab" id="tab-summer" aria-selected="false" aria-controls="palette-grid" data-season="summer" tabindex="-1">True Summer</button>
-        <button role="tab" id="tab-autumn" aria-selected="false" aria-controls="palette-grid" data-season="autumn" tabindex="-1">True Autumn</button>
+      <div class="tabs" role="tablist" aria-label="Choose a season">
+        <button role="tab" id="tab-winter" aria-selected="true" aria-controls="palette-grid" data-season="winter" tabindex="0">Winter</button>
+        <button role="tab" id="tab-spring" aria-selected="false" aria-controls="palette-grid" data-season="spring" tabindex="-1">Spring</button>
+        <button role="tab" id="tab-summer" aria-selected="false" aria-controls="palette-grid" data-season="summer" tabindex="-1">Summer</button>
+        <button role="tab" id="tab-autumn" aria-selected="false" aria-controls="palette-grid" data-season="autumn" tabindex="-1">Autumn</button>
       </div>
+      <div class="tabs subtabs" id="subtabs" role="tablist" aria-label="Choose a sub-season"></div>
       <p class="result-banner" id="banner" aria-live="polite">Looking Beautiful, True Winter</p>
-      <div class="palette" id="palette-grid" role="tabpanel" aria-labelledby="tab-winter">
+      <div class="palette" id="palette-grid" role="tabpanel" aria-labelledby="subtab-true">
         <div class="chip"><i style="background:#b73275"></i>Very Berry</div>
         <div class="chip"><i style="background:#823270"></i>Hollyhock</div>
         <div class="chip"><i style="background:#4a5fa5"></i>Amparo Blue</div>
@@ -238,9 +243,9 @@
       <div class="less">
         <h3>Less Complementary Colors</h3>
         <p>Colors outside your palette, shown without judgment.</p>
-        <div class="less-grid" id="less-grid"></div>
+        <ul id="less-list"></ul>
       </div>
-      <p class="palette-note" id="season-note">Palettes are from a published style guide (the concept wardrobe, True Winter, Spring, Summer and Autumn guides). Colors were sampled from the guide's images, so they are close on-screen matches, not official values. The 12-season system is a convention, not a tested classification.</p>
+      <p class="palette-note" id="season-note">Palettes are from a published style guide (the concept wardrobe, one guide per season). Colors were sampled from the guide's images, so they are close on-screen matches, not official values. The 12-season system is a convention, not a tested classification.</p>
     </section>
 
     <section aria-labelledby="chk-h">
@@ -301,71 +306,134 @@
 </div>
 <div class="demo-bar" role="note">Your photos are analyzed on your device only. Nothing is uploaded, saved or sent.</div>
 <script>
-
-  // Palettes come from the concept wardrobe's "comprehensive guides" (palette image and
-  // "colours to avoid" image for each True season). Colors were sampled from the web images,
-  // so they are close on-screen matches, not official values. Names are as printed on the images.
-  // The "less complementary" swatches are unnamed on the source image.
-  function pal(names, hex) {
-    var n = names.split('|'), h = hex.split(' ');
-    return n.map(function (name, i) { return [name, '#' + h[i]]; });
-  }
-  var SEASONS = {
-    winter: { label: "True Winter", hero: [13, 21, 27, 11, 31, 16, 7],
-      colors: pal("Brilliant White|Lily White|Silver Birch|Mourning Dove|Brushed Nickel|Tender Touch|Elfin Yellow|Misty Jade|Spa Retreat|Halogen Blue|Pirouette|Bonbon|Strawberry Moon|Very Berry|Wild Aster|Lilac Chiffon|Violet|Radiant Orchid|Hollyhock|Charisma|Persian Jewel|Amparo Blue|Surf the Web|Bellwether Blue|Ocean Cavern|Cyan Blue|Faience|Spectra Green|Tidepool|Green Heron|Gentian Violet|Navy Blue|Medieval Blue|Bracken|Molé",
-        "edf1ff e2e2da d2cfc4 95908b 73706f f3d4df eeea97 bcd9c8 b4e8ec bdc6dc edbedc f1a6cc da6ca1 b73275 92316f de9bc4 c180b5 ac5d98 823270 642b60 6e81be 4a5fa5 203c7f 23305b 252a48 15a3c7 2a6a8b 009b8c 086f69 27535a 544275 403f6f 2a304e 4e3e3a 392c2b"),
-      less: "fff4dc d9b429 f8b29e f3a18a a85b58 addfff aaae86 a29d36 a27546 a45325".split(' ') },
-    spring: { label: "True Spring", hero: [16, 22, 27, 11, 18, 31, 14],
-      colors: pal("Vanilla|Sun Kiss|Golden Fleece|Jojoba|Desert Mist|Golden Mist|Moonstone|Pale Gold|Dachshund|Demitasse|Impala|Sunshine|Yarrow|Mimosa|Amber|Burnt Coral|Emberglow|Cayenne|Georgia Peach|Hibiscus|Windsurfer|Della Robbia Blue|Marina|Directoire Blue|True Blue|Spring Bouquet|Irish Green|Biscay Green|Holly Green|Bosphorus|Daiquiri Green|Bright Chartreuse|Titanite|Salted Lime|First Tee",
-        "f3e2c1 ebd1ba f2d1a1 dabd80 e0b588 d6cd95 cdb584 bd9865 704f36 3f332b f7ce97 fadd85 face6e efc05a efad56 e9897e e9685a e04950 f97373 de3847 a3bbe0 799dca 5086c3 0161a2 1f4477 6ece87 45be75 57c6aa 0f9e77 017557 c8d77e b6bf51 90ab39 5f843c 00713b"),
-      less: "f5f5f5 eeaccb 873256 af7fb1 5e6d8b 22314b 9f8f88 949599 3f464e 000000".split(' ') },
-    summer: { label: "True Summer", hero: [17, 21, 26, 31, 16, 20, 2],
-      colors: pal("Light Gray|Perfectly Pale|Silver Cloud|Rock Ridge|Major Brown|Lunar Rock|Ashes of Roses|Purple Dove|Moonscape|Forged Iron|Dusty Blue|Troposphere|Gray Mist|Trooper|Turbulence|Sea Pink|Chateau Rose|Bubblegum|Carmine|Anemone|Baby Lavender|Deep Periwinkle|Corsican Blue|Orient Blue|Blue Ribbon|Crystal Seas|Wave Ride|Ipanema|Larkspur|Saxony Blue|Neptune Green|Ming Green|Ivy|Teal|Chesapeake Bay",
-        "dad8c9 d3c9be beb7b0 918c86 605752 c5c5c5 b5acab 99888d 73606a 48464a 8c9dad 76849b 99aeae 697a7e 4e545b de98ab d2738f e9738d bc4869 842c48 a2a9d1 7c83bc 646093 48457a 3a395f 5eb0cf 2d80a7 62bbc5 3c7d90 1f6680 7fbb9e 3aa278 226c63 478589 16525a"),
-      less: "f5f5f5 f9bf12 d9a328 f2592b cb3e28 f8a78d a55624 914020 270067 000000".split(' ') },
-    autumn: { label: "True Autumn", hero: [15, 17, 26, 32, 21, 16, 3],
-      colors: pal("Seedpearl|Angora|Fog|Double Cream|Straw|Tidal Foam|Oil Green|Lead Gray|Stone Gray|Deep Depths|Peach Nougat|Peach Bloom|Cedar Wood|Henna|Chicory Coffee|Muskmelon|Amberglow|Orange Rust|Summer Fig|Picante|Peach Amber|Porcelain Rose|American Beauty|Merlot|Maroon Banner|Sea Jet|Bayou|Blue Mist|Biscay Bay|Deep Teal|Beechnut|Fern|Split Pea|Fir Green|Forest Night",
-        "e6dac4 dfd1bb d0c5b1 f3e0ac e0c992 bfb9a3 80856d 8a7963 685e4f 46483d e6af91 d99b7c a1665b 7c423c 4b342f ec935e dc793e c25a3c be4b3b 8d3f2d fb9f93 ea6b6a a73340 73272d 5b2b38 54afbc 20706f 5bacc3 097988 19454b c2c18d 9aa067 9c9a40 67592a 434237"),
-      less: "edf1ff f9d7e7 dbc2df b8dbf1 9caed6 d2e8c4 a8a9ad ef358f 0035ff 000000".split(' ') }
+  function pal(names, hex) { var n = names.split('|'), h = hex.split(' '); return n.map(function (x, i) { return [x, '#' + h[i]]; }); }
+  var TRUE_WINTER = pal("Brilliant White|Lily White|Silver Birch|Mourning Dove|Brushed Nickel|Tender Touch|Elfin Yellow|Misty Jade|Spa Retreat|Halogen Blue|Pirouette|Bonbon|Strawberry Moon|Very Berry|Wild Aster|Lilac Chiffon|Violet|Radiant Orchid|Hollyhock|Charisma|Persian Jewel|Amparo Blue|Surf the Web|Bellwether Blue|Ocean Cavern|Cyan Blue|Faience|Spectra Green|Tidepool|Green Heron|Gentian Violet|Navy Blue|Medieval Blue|Bracken|Molé",
+    "edf1ff e2e2da d2cfc4 95908b 73706f f3d4df eeea97 bcd9c8 b4e8ec bdc6dc edbedc f1a6cc da6ca1 b73275 92316f de9bc4 c180b5 ac5d98 823270 642b60 6e81be 4a5fa5 203c7f 23305b 252a48 15a3c7 2a6a8b 009b8c 086f69 27535a 544275 403f6f 2a304e 4e3e3a 392c2b");
+  // "Less Complementary Colors": plain-language descriptions, no swatches.
+  // Light Spring, Light Summer and True Summer are Anne's own text. The other nine are paraphrased from the concept wardrobe guides ("Colours to Avoid" sections).
+  var LESS = {
+    'Light Spring':  ['Black, dark grey, deep burgundy and dark olive', 'Icy tones, such as icy blue or silver'],
+    'Light Summer':  ['Strong shades such as black, orange, bright yellow and deep browns', 'Warm, earthy tones such as rust, mustard and olive green'],
+    'True Summer':   ['Warm oranges, bright yellow and tomato red', 'Black, warm browns and golden tones'],
+    'True Spring':   ['Very cool colors, such as icy blues and greys', 'Muted, toned-down colors, such as dusty blues and muddy browns', 'Dark, harsh colors such as deep blues and purples (black and white are fine)'],
+    'Bright Spring': ['Muted, toned-down colors, such as dusty blues and muddy browns', 'Very cool colors, such as icy blues and greys'],
+    'Soft Summer':   ['Vibrant colors such as intense pinks and blues (black and white excepted)', 'Rich, warm colors such as orangey reds and earthy browns'],
+    'True Autumn':   ['Cool, bright colors such as pastel pink and ice blue (black and white excepted)', 'Extremely bright, vibrant colors such as intense pinks and blues'],
+    'Soft Autumn':   ['Vibrant colors such as intense oranges', 'Dark colors such as deep purples and blues', 'Very cool colors such as black, white and blueish greys'],
+    'Deep Autumn':   ['White, pastels and other toned-down colors such as dusty blues and pinks', 'Very cool, frosty colors such as intense pinks and blueish greys'],
+    'True Winter':   ['Warm, earthy colors such as golden browns and rusty oranges', 'Soft, muted colors such as dusty blues and lavender (icy pastels work as accents with dark neutrals)'],
+    'Deep Winter':   ['Very warm, earthy colors such as golden oranges and browns', 'Warmer pastels', 'Desaturated, toned-down colors such as dusty yellows'],
+    'Bright Winter': ['Rich, warm shades such as orangey browns and golden yellows', 'Soft, toned-down earth tones such as pale gold and muted brown']
   };
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  // Palettes for the other 11 seasons. Source: the concept wardrobe, "<Season>: A Comprehensive Guide", palette image (same source as True Winter).
+  // Names are as printed on each image. Codes were sampled from the images (median of each swatch), so they are close on-screen matches, not official Pantone values.
+  // Deep Autumn and Deep Winter are listed as "Dark Autumn" and "Dark Winter" on that site.
+  var PALETTES = {
+    'True Spring': pal("Vanilla|Sun Kiss|Golden Fleece|Jojoba|Desert Mist|Golden Mist|Moonstone|Pale Gold|Dachshund|Demitasse|Impala|Sunshine|Yarrow|Mimosa|Amber|Burnt Coral|Emberglow|Cayenne|Georgia Peach|Hibiscus|Windsurfer|Della Robbia Blue|Marina|Directoire Blue|True Blue|Spring Bouquet|Irish Green|Biscay Green|Holly Green|Bosphorus|Daiquiri Green|Bright Chartreuse|Titanite|Salted Lime|First Tee",
+      "f3e2c1 ebd1ba f2d1a1 dabd80 e0b588 d6cd95 cdb584 bd9865 704f36 3f332b f7ce97 fadd85 face6e efc05a efad56 e9897e e9685a e04950 f97373 de3847 a3bbe0 799dca 5086c3 0161a2 1f4477 6ece87 45be75 57c6aa 0f9e77 017557 c8d77e b6bf51 90ab39 5f843c 00713b"),
+    'Light Spring': pal("Shortbread|Whitecap Gray|Alabaster Gleam|Lamb's Wool|Boulder|Ancient Scroll|Agate Gray|Driftwood|Bungee Cord|Chocolate Chip|Lemon Verbena|Lemon Drop|Beach Ball|Golden Haze|Sunset Gold|Strawberry Cream|Blossom|Candlelight Peach|Peach Blossom|Sun Kissed Coral|Lavender|Bougainvillea|Deep Lavender|Natural|Raw Umber|Atomizer|Baltic Sea|Blue Topaz|Blue Curacao|Blue Moon|Lettuce Green|Jade Lime|Bud Green|Poison Green|Mint",
+      "efdcc3 e0d5c6 f0debd e5d0b1 d1be9b cbc3b7 b3b1a1 847a75 696156 685a4e f4e87a fdd878 f3c65f fbd897 f7c46c f4c3c4 f2b2ae f8a39d eb8888 ea6676 afa4ce 9883b9 775496 aa907d 92705f 9ad4ea 7ab6d9 78bdd4 33becc 3686a0 bed38e a1ca7b 79b465 4db560 0f9d76"),
+    'Bright Spring': pal("Snow White|Vanilla Ice|Rutabaga|Summer Sand|Oatmeal|Silver Lining|Brindle|Chimera|Imperial Blue|Déjà Vu Blue|Aspen Gold|Pale Marigold|Artisan's Gold|Buckskin|Aurora Red|Orchid Pink|Geranium Pink|Hot Pink|Pink Lemonade|Geranium|Fuchsia Pink|Raspberry Rose|Raspberry Radiance|Nouvean Navy|Mazarine Blue|Blue Radiance|Peacock Blue|Tropical Green|Bachelor Button|Mosaic Blue|Sharp Green|Macaw Green|Online Lime|Rolling Hills|Formal Garden",
+      "f1f0ec f0eada ecdcbd d7ccbb cac3b3 bdb6ab 83776b 4d4c48 005b93 18406b ffd662 fec66e f1ab46 d18f55 b93b33 f4bbca f6909e e35c7c ee6e8b da3c58 e088b8 cb4385 802a50 395589 263d77 59c9d5 00a0b1 108780 4bbbd5 00758f c7e67a 9bb53f 43883d 22794a 1f512a"),
+    'True Summer': pal("Light Gray|Perfectly Pale|Silver Cloud|Rock Ridge|Major Brown|Lunar Rock|Ashes of Roses|Purple Dove|Moonscape|Forged Iron|Dusty Blue|Troposphere|Gray Mist|Trooper|Turbulence|Sea Pink|Chateau Rose|Bubblegum|Carmine|Anemone|Baby Lavender|Deep Periwinkle|Corsican Blue|Orient Blue|Blue Ribbon|Crystal Seas|Wave Ride|Ipanema|Larkspur|Saxony Blue|Neptune Green|Ming Green|Ivy|Teal|Chesapeake Bay",
+      "dad8c9 d3c9be beb7b0 918c86 605752 c5c5c5 b5acab 99888d 73606a 48464a 8c9dad 76849b 99aeae 697a7e 4e545b de98ab d2738f e9738d bc4869 842c48 a2a9d1 7c83bc 646093 48457a 3a395f 5eb0cf 2d80a7 62bbc5 3c7d90 1f6680 7fbb9e 3aa278 226c63 478589 16525a"),
+    'Light Summer': pal("Tofu|Bone White|Pelican|Atmosphere|Silent Storm|Shadow Gray|Toadstool|Peppercorn|Plum Truffle|Catawba Grape|Salmon Rose|Dubarry|Sugar Coral|Paradise Pink|Winterberry|Candy Pink|Confetti|Sachet Pink|Carmine Rose|Lilac Rose|Open Air|Vista Blue|Granada Sky|Star Sapphire|Turkish Sea|Blue Elixir|River Blue|Capri|Baltic|Pagoda Blue|Cabbage|Mint Leaf|Sea Green|Simply Green|Antique Green",
+      "e8e4da d6d1c0 c1bcac a89c94 827d77 bba5a0 967c7f 6c5656 675758 5d3c43 ff8d94 f25f66 f56c73 e4455e be394f f5b0bd e6798e f18aad e35b8f bd4275 94b2df 80a0d4 5d81bc 36629f 1a5190 8dccdd 38aecd 44bbca 279d9f 1b7f8e 63dbbf 02b694 159c88 1a9e74 2a675c"),
+    'Soft Summer': pal("Icicle|Birch|Chateau Gray|Satellite|Iron|Mirage Gray|Sedona Sage|Gray Quill|Thunderstorm|Raven|English Rose|Quartz Pink|Flowering Ginger|Slate Rose|Earth Red|Cameo Pink|Wild Rose|Mesa Rose|Hawthorn Rose|Blackberry Wine|Icelandic Blue|Purple Impression|Lavender Violet|Heron|Mood Indigo|Leisure Time|Porcelain|Hydro|Arctic|Atlantic Deep|Meadow|Beryl Green|Hunter Green|Garden Glade|Shadow Green",
+      "dbddd1 ddd5c7 bbb1a8 978d89 736460 abafae 686d6c 7b797b 5b585a 413e3d f4c6c3 efa6aa e78b90 b45865 95424e dba9b7 ce8498 a76e7a 884c5e 4e3246 aaadc2 858fb1 767ba5 62617e 353a4c 7fbfc5 5d9ca4 426972 648589 274e55 89c099 619187 335749 dcd8a8 cfc486"),
+    'True Autumn': pal("Seedpearl|Angora|Fog|Double Cream|Straw|Tidal Foam|Oil Green|Lead Gray|Stone Gray|Deep Depths|Peach Nougat|Peach Bloom|Cedar Wood|Henna|Chicory Coffee|Muskmelon|Amberglow|Orange Rust|Summer Fig|Picante|Peach Amber|Porcelain Rose|American Beauty|Merlot|Maroon Banner|Sea Jet|Bayou|Blue Mist|Biscay Bay|Deep Teal|Beechnut|Fern|Split Pea|Fir Green|Forest Night",
+      "e6dac4 dfd1bb d0c5b1 f3e0ac e0c992 bfb9a3 80856d 8a7963 685e4f 46483d e6af91 d99b7c a1665b 7c423c 4b342f ec935e dc793e c25a3c be4b3b 8d3f2d fb9f93 ea6b6a a73340 73272d 5b2b38 54afbc 20706f 5bacc3 097988 19454b c2c18d 9aa067 9c9a40 67592a 434237"),
+    'Soft Autumn': pal("Sweet Corn|White Asparagus|Turtledove|Overcast|Bog|Sage Green|Aloe|Olive Night|Sage|Beetle|Burlwood|Russet|Carob Brown|Hot Chocolate|Rum Raisin|Coral Almond|Tea Rose|Holly Berry|Crabapple|Cardinal|Crystal Rose|Murex Shell|Faded Rose|Baroque Rose|Tibetan Red|Dusk Blue|Blue Jasper|High Tide|Deep Dive|Estate Blue|Ocean Wave|Dusty Jade Green|Bottle Green|Bristol Blue|Mallard Green",
+      "f0ebd7 e1dbc9 ded7c8 c3bdab bab696 a7a781 817a60 535040 91946e 56584c 9b716b 905f51 855c4b 683b39 583432 e29d93 dc7178 b44e5d d77e70 ad3e48 fdc3c6 f8a3a4 bf6464 b35a66 782a39 7ba0c0 527ea9 345e8b 29495c 233658 8ec5b6 7bb5a3 437d6d 568f91 405e5c"),
+    'Deep Autumn': pal("White Swan|Smoke Gray|Summer Melon|Autumn Blonde|Latté|French Oak|Elephant Skin|Tarmac|Savannah Tan|Pavement|Ochre|Mustard Gold|Cathay Spice|Butterum|Sunburn|Blooming Dahlia|Burnt Sienna|Cranberry|Burnt Russet|Pomegranate|Pastel Lavender|Spring Crocus|Rosé Sorbet|Plum Caspia|Titan|Bermuda|Lagoon|Frosty Spruce|Evergreen|Green Gables|Willow|Plantation|Military Olive|Wren|Glamour Gold",
+      "e4d7c5 cebba8 ead3ae eecfad c5a582 cbc1b3 8f8982 5a5348 a69483 534d50 d6af66 b08e51 99642c c68f65 b37256 ec9688 c65d52 bb4a4d 7e3940 6c2831 d8a1c4 ba69a1 a3497c 61234a 263b51 60c8b3 4d9e9a 578270 12574a 324241 9a8b4f 7a6332 63563b 4b4139 be9b64"),
+    'Deep Winter': pal("Lucent White|Vaporous Gray|Pumice Stone|Ghost Gray|Charcoal Gray|Lemonade|Ballet Slipper|Bay|Spun Sugar|Purple Heather|Plumeria|Fruit Dove|Bossy Pink|Innuendo|Red Bud|Lipstick Red|Scarlet Smile|Rio Red|Rhubarb|Zinfandel|African Violet|Bellflower|Plum Jam|Grape Royale|Baritone Blue|Splish Splash|Mediterranean Blue|Moroccan Blue|Deep Water|Pageant Blue|Marine Green|Lush Meadow|Forest Biome|Ponderosa Pine|Tap Shoe",
+      "f4f7ff dfddd7 cac2b9 9c9b98 6c6868 f0e79d ecced5 bae5d6 b4dcea bab8d3 fb90a2 cf5c78 ce3d66 c43362 962d49 b31b38 9f2436 8a2232 77202f 5d2935 b085b7 9469a2 634177 502e55 262735 69bbdd 1578a7 104e67 266691 1f2c43 40a48e 006e52 194b46 1e3a3c 2a2b2d"),
+    'Bright Winter': pal("Bright White|Arctic Wolf|Abbey Stone|Steeple Gray|Steel Gray|Pastel Yellow|Pink Dogwood|Fair Aqua|Festival Bloom|Pastel Lilac|Ranunculus|Honeysuckle|Raspberry Sorbet|Vivacious|Red Plum|Fuchsia Purple|Fuchsia Fedora|Fuchsia Red|Rose Violet|Purple Wine|Iolite|Blue Iris|Bluing|Ultramarine|Dazzling Blue|Aged Copper|Viridian Green|Blue Blossom|Blithe|Turkish Tile|Black Iris|Black Ink|Blackened Pearl|Pirate Black|Anthracite",
+      "f4f9ff e6decf aba798 827e7c 726f70 f2e6b1 f7d1d1 b8e2dc f5d6e6 bfb4cb ec8b8d d94f71 d2386c a32857 7c2946 d4367a ca4286 ab3475 c0428a 8c3573 707bb4 5a5b9f 333e83 5b7ebd 3950a0 5cc8d7 009499 2da8d8 0084bd 00698b 2b3042 45413c 4e4b51 373838 28282d")
+  };
+  PALETTES['True Winter'] = TRUE_WINTER;
+
+  // ===== Season picker: 4 seasons, each with 3 sub-seasons (12 palettes) =====
+  var GROUPS = {
+    winter: ['Deep', 'True', 'Bright'],
+    spring: ['Light', 'True', 'Bright'],
+    summer: ['Light', 'True', 'Soft'],
+    autumn: ['Soft', 'True', 'Deep']
+  };
+  // Indices into each True palette used to color the hero swatches.
+  var HERO = { winter: [13, 21, 27, 11, 31, 16, 7], spring: [16, 22, 27, 11, 18, 31, 14],
+               summer: [17, 21, 26, 31, 16, 20, 2], autumn: [15, 17, 26, 32, 21, 16, 3] };
+  var cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+
+  var seasonTabs = Array.prototype.slice.call(document.querySelectorAll('[data-season]'));
+  var subBar = document.getElementById('subtabs');
   var grid = document.getElementById('palette-grid');
-  var lessGrid = document.getElementById('less-grid');
+  var lessList = document.getElementById('less-list');
   var banner = document.getElementById('banner');
   var heroDots = document.querySelectorAll('#hero-swatches i');
+  var curSeason = 'winter', curSub = 'True';
 
-  function show(key) {
-    var s = SEASONS[key];
+  function showPalette() {
+    var name = curSub + ' ' + cap(curSeason);
+    var colors = PALETTES[name];
     grid.innerHTML = '';
-    s.colors.forEach(function (c) {
+    colors.forEach(function (c) {
       var d = document.createElement('div'); d.className = 'chip';
       var i = document.createElement('i'); i.style.background = c[1];
       d.appendChild(i); d.appendChild(document.createTextNode(c[0])); grid.appendChild(d);
     });
-    lessGrid.innerHTML = '';
-    s.less.forEach(function (h) {
-      var i = document.createElement('i'); i.style.background = h; i.setAttribute('role', 'img'); i.setAttribute('aria-label', 'Swatch ' + h);
-      lessGrid.appendChild(i);
+    lessList.innerHTML = '';
+    (LESS[name] || []).forEach(function (t) {
+      var li = document.createElement('li'); li.textContent = t; lessList.appendChild(li);
     });
-    banner.textContent = 'Looking Beautiful, ' + s.label;
-    s.hero.forEach(function (n, k) { if (heroDots[k]) heroDots[k].style.background = s.colors[n][1]; });
-    tabs.forEach(function (t) {
-      var on = t.dataset.season === key;
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      t.tabIndex = on ? 0 : -1;
-    });
-    grid.setAttribute('aria-labelledby', 'tab-' + key);
+    banner.textContent = 'Looking Beautiful, ' + name;
+    if (curSub === 'True') {
+      HERO[curSeason].forEach(function (n, k) { if (heroDots[k]) heroDots[k].style.background = colors[n][1]; });
+    }
+    grid.setAttribute('aria-labelledby', 'subtab-' + curSub.toLowerCase());
   }
-  tabs.forEach(function (t, idx) {
-    t.addEventListener('click', function () { show(t.dataset.season); });
+
+  function buildSubTabs() {
+    subBar.innerHTML = '';
+    var btns = GROUPS[curSeason].map(function (sub, idx, arr) {
+      var b = document.createElement('button');
+      b.setAttribute('role', 'tab'); b.id = 'subtab-' + sub.toLowerCase();
+      b.setAttribute('aria-controls', 'palette-grid');
+      b.textContent = sub;
+      var on = sub === curSub;
+      b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1;
+      b.addEventListener('click', function () { curSub = sub; buildSubTabs(); showPalette(); });
+      b.addEventListener('keydown', function (e) {
+        var next = e.key === 'ArrowRight' ? idx + 1 : e.key === 'ArrowLeft' ? idx - 1 : null;
+        if (next === null) return;
+        next = (next + arr.length) % arr.length;
+        curSub = arr[next]; buildSubTabs(); showPalette();
+        document.getElementById('subtab-' + curSub.toLowerCase()).focus(); e.preventDefault();
+      });
+      subBar.appendChild(b); return b;
+    });
+  }
+
+  function selectSeason(key) {
+    curSeason = key; curSub = 'True';
+    seasonTabs.forEach(function (t) {
+      var on = t.dataset.season === key;
+      t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1;
+    });
+    buildSubTabs(); showPalette();
+  }
+
+  seasonTabs.forEach(function (t, idx) {
+    t.addEventListener('click', function () { selectSeason(t.dataset.season); });
     t.addEventListener('keydown', function (e) {
       var next = e.key === 'ArrowRight' ? idx + 1 : e.key === 'ArrowLeft' ? idx - 1 : null;
       if (next === null) return;
-      next = (next + tabs.length) % tabs.length;
-      tabs[next].focus(); show(tabs[next].dataset.season); e.preventDefault();
+      next = (next + seasonTabs.length) % seasonTabs.length;
+      seasonTabs[next].focus(); selectSeason(seasonTabs[next].dataset.season); e.preventDefault();
     });
   });
-  show('winter');
+  selectSeason('winter');
 </script>
 </body>
 </html>
